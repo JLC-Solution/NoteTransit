@@ -1,0 +1,45 @@
+NOTETRANSIT : ONENOTE -> APPLE NOTES
+====================================
+
+Avant de commencer
+- Mac connecté au compte iCloud qui doit recevoir les notes, avec Notes activé
+  (Réglages Système > votre nom > iCloud > Notes).
+- Votre compte Microsoft (celui de OneNote) et une connexion internet.
+- Mac branché sur secteur, capot ouvert : une grosse migration peut durer des heures.
+
+Lancement
+1. Ouvrez l'app Terminal (Cmd+Espace, tapez « Terminal », Entrée).
+   Tapez  bash  suivi d'un espace (sans Entrée), glissez le fichier
+   « Lancer la migration.command » dans la fenêtre, puis appuyez sur Entrée.
+   (Un double-clic sur le fichier est bloqué par macOS car il n'est pas signé :
+   si une alerte apparaît, cliquez sur Annuler, pas sur Corbeille.)
+2. Si Python n'est pas installé, macOS propose d'installer les « outils de ligne
+   de commande » : acceptez, attendez la fin, puis relancez.
+3. Le Terminal affiche une adresse (https://login.microsoft.com/device) et un code :
+   ouvrez l'adresse, tapez le code, connectez-vous avec votre compte Microsoft.
+4. La liste de vos blocs-notes s'affiche. Tapez le nom de l'un d'eux, ou Entrée
+   pour tous. Répondez « o » pour un essai sur 3 pages, « n » pour tout faire.
+5. Le script fait l'inventaire, puis télécharge toutes les pages. Rien n'arrive
+   dans Notes pendant ce temps : c'est normal. Microsoft limite le nombre de
+   requêtes par heure, d'où des pauses : laissez faire.
+6. À la fin, Notes demande « Importer ? » : cliquez sur Importer (la fenêtre peut
+   être derrière le Terminal). Un clic par lot de 500 notes.
+7. Si macOS demande que « Terminal » contrôle « Notes », cliquez sur OK.
+8. Le script range ensuite chaque note dans le bon dossier.
+
+Résultat
+- Dossier « Import OneNote » dans Notes : bloc-notes = dossier, section =
+  sous-dossier, page = note. Sous-pages titrées « Page parente › Sous-page ».
+- iCloud synchronise ensuite tout vers l'iPhone et l'iPad.
+
+Interruption : relancez simplement, la migration reprend où elle s'était arrêtée.
+Ne coupez PAS pendant « Rangement des notes dans les dossiers… ». Si c'est arrivé :
+supprimez dans Notes les dossiers « Import OneNote » et « Notes importées », ainsi que
+le fichier migration_state.json, puis relancez.
+
+Conservé : titres, gras/italique/souligné, listes, cases à cocher, tableaux,
+images (à leur place), pièces jointes, dates de création et de modification.
+Pas repris : dessins et écriture manuscrite, couleurs et polices, mise en page
+libre (le contenu devient linéaire), état « coché » des cases, blocs-notes
+partagés par quelqu'un d'autre.
+OneNote n'est jamais modifié : vos notes d'origine restent intactes.

@@ -1,0 +1,14 @@
+# Données personnelles générées à l'exécution — ne jamais publier
+.token_cache.json
+migration_state.json
+migration.log
+cache/
+exports/
+attachments/
+
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+
+.DS_Store
