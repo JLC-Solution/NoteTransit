@@ -176,7 +176,7 @@ By default NoteTransit signs in with Microsoft's public client ID for the Micros
 
 ## License & author
 
-MIT — free to use, modify and share. See [LICENSE](LICENSE).
+MIT — free to use, modify and share. See [LICENSE](LICENSE). Version history: [CHANGELOG](CHANGELOG.md).
 Made by **JLC Solution**. Issues and pull requests welcome.
 
 ---
