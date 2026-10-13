@@ -21,6 +21,21 @@ if [ ! -x .venv/bin/python ]; then
     echo "La préparation a échoué (connexion internet ?)."; read -r -p "Entrée pour fermer."; exit 1; }
 fi
 
+# Des pages en erreur lors d'un lancement précédent ? Proposer de ne réessayer qu'elles.
+nerr=$(.venv/bin/python -c 'import json;print(len(json.load(open("migration_state.json")).get("errors",{})))' 2>/dev/null)
+if [ -n "$nerr" ] && [ "$nerr" -gt 0 ]; then
+  echo
+  echo "$nerr page(s) étaient en erreur lors du lancement précédent."
+  read -r -p "Réessayer UNIQUEMENT ces pages, sans relire tout OneNote ? (o/n) " reessai
+  if [ "$reessai" = "o" ] || [ "$reessai" = "O" ]; then
+    echo "Si Notes demande « Importer ? » : cliquez sur Importer."
+    caffeinate -i .venv/bin/python -u onenote_to_applenotes.py --retry-errors 2>&1 | tee -a migration.log
+    echo
+    read -r -p "Terminé. Appuyez sur Entrée pour fermer."
+    exit 0
+  fi
+fi
+
 echo
 echo "Étape 1 : connexion à votre compte Microsoft et liste de vos blocs-notes."
 echo "Rien n'est encore écrit dans Notes."

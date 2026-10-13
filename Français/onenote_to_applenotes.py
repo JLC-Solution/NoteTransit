@@ -80,14 +80,30 @@ MESSAGES = {
     "ready": ("\n{n} notes prêtes, en {lots} lot(s) : Notes demandera « Importer » {lots} fois.",
               "\n{n} notes ready, in {lots} batch(es): Notes will ask \"Import\" {lots} time(s)."),
     "done": ("\nTerminé : {n} notes migrées au total.", "\nDone: {n} notes migrated in total."),
-    "errors_title": ("Pages en erreur (relancez la commande pour réessayer) :",
-                     "Pages with errors (run the command again to retry):"),
+    "errors_title": ("Pages en erreur (relancez : seules ces pages seront réessayées) :",
+                     "Pages with errors (run it again: only these pages will be retried):"),
+    "sections_summary": ("{n} sections lues, dont {done} déjà entièrement migrées (non affichées).",
+                         "{n} sections read, {done} of them already fully migrated (not shown)."),
+    "retry_title": ("Nouvel essai des pages en erreur uniquement ({n}), sans relire tout OneNote…",
+                    "Retrying only the pages with errors ({n}), without scanning all of OneNote…"),
+    "retry_none": ("Aucune page en erreur à réessayer.", "No pages with errors to retry."),
+    "retry_locate": ("   Recherche de la section de {n} élément(s) en erreur…",
+                     "   Locating the section of {n} failed item(s)…"),
+    "retry_lost": ("   ✗ introuvable dans OneNote (supprimé ?) : {msg}",
+                   "   ✗ not found in OneNote (deleted?): {msg}"),
+    "unfiled_warn": ("\n⚠ Certaines notes avaient été importées mais pas rangées. Si un dossier "
+                     "« Notes importées » existe dans Notes, supprimez-le maintenant pour éviter les doublons.",
+                     "\n⚠ Some notes were imported but not filed. If there is an \"Imported Notes\" folder "
+                     "in Notes, delete it now to avoid duplicates."),
+    "press_enter": ("Appuyez sur Entrée pour continuer…", "Press Enter to continue…"),
     "h_list": ("affiche les noms des blocs-notes sans rien écrire", "list notebook names, writes nothing"),
     "h_details": ("avec --list : affiche aussi groupes et sections", "with --list: also show section groups and sections"),
     "h_max": ("essai : ne migre que N pages", "test: migrate only N pages"),
     "h_notebook": ("ne migrer que ce bloc-notes", "migrate only this notebook"),
     "h_root": ("dossier racine dans Notes (défaut : %(default)s)", "root folder in Notes (default: %(default)s)"),
     "h_client": ("ID d'application Azure (optionnel)", "Azure app ID (optional)"),
+    "h_retry": ("ne réessayer que les pages en erreur (sans relire tout OneNote)",
+                "retry only the pages with errors (no full OneNote scan)"),
 }
 
 
@@ -426,7 +442,7 @@ def import_enex(path, expected):
 
 def load_state():
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
-    for key in ("folders", "pages", "errors"):
+    for key in ("folders", "pages", "errors", "retry_sections"):
         state.setdefault(key, {})
     return state
 
@@ -454,25 +470,77 @@ def print_tree(nodes, indent=0):
         print_tree(n["children"], indent + 1)
 
 
-def collect_pages(g, nodes, path, state, out, limit):
-    """Liste (chemin, page) des pages pas encore migrées."""
+def collect_pages(g, nodes, path, state, out, limit, stats):
+    """Liste (chemin, page) des pages pas encore migrées.
+    Seules les sections qui ont encore des pages à migrer sont affichées."""
     for n in nodes:
         if len(out) >= limit:
             return
         here = path + (n["name"],)
         if n["kind"] != "section":
-            collect_pages(g, n["children"], here, state, out, limit)
+            collect_pages(g, n["children"], here, state, out, limit, stats)
             continue
-        try:
-            pages = section_pages(g, n["id"])
-        except Exception as e:
-            state["errors"][n["id"]] = t("section_unreadable", path=' / '.join(here), e=e)
-            print(f"✗ {' / '.join(here)} : {e}")
-            continue
-        todo = [p for p in pages if p["id"] not in state["pages"]]
+        if not collect_section(g, n["id"], here, state, out, limit):
+            stats["done"] += 1
+        stats["sections"] += 1
+
+
+def collect_section(g, section_id, here, state, out, limit=float("inf")):
+    """Ajoute à out les pages pas encore migrées d'une section ; retourne leur nombre."""
+    try:
+        pages = section_pages(g, section_id)
+    except Exception as e:
+        state["errors"][section_id] = t("section_unreadable", path=' / '.join(here), e=e)
+        state["retry_sections"][section_id] = list(here)
+        print(f"✗ {' / '.join(here)} : {e}")
+        return 1
+    state["errors"].pop(section_id, None)
+    todo = [p for p in pages if p["id"] not in state["pages"]]
+    if todo:
         print(t("section_line", path=' / '.join(here), total=len(pages), todo=len(todo)))
-        for p in todo[: int(limit - len(out)) if limit != float("inf") else None]:
-            out.append((here, p))
+    for p in todo[: int(limit - len(out)) if limit != float("inf") else None]:
+        p["_section"] = section_id
+        out.append((here, p))
+    return len(todo)
+
+
+def section_path(g, section_id, root):
+    """Chemin (racine, bloc-notes, groupes…, section) d'une section, en remontant ses parents."""
+    s = g.get(f"{GRAPH}/sections/{section_id}?$expand=parentNotebook($select=displayName),"
+              "parentSectionGroup($select=id,displayName)")
+    names = [s["displayName"]]
+    sg = s.get("parentSectionGroup")
+    while sg:
+        names.insert(0, sg["displayName"])
+        sg = g.get(f"{GRAPH}/sectionGroups/{sg['id']}?$expand=parentSectionGroup($select=id,displayName)"
+                   ).get("parentSectionGroup")
+    return [root, s["parentNotebook"]["displayName"]] + names
+
+
+def retry_todo(g, state, root):
+    """Pages à réessayer : on ne relit que les sections qui contiennent des erreurs."""
+    sections = dict(state["retry_sections"])
+    # États créés par une version précédente : retrouver la section de chaque erreur
+    unknown = [eid for eid in state["errors"] if eid not in sections] if not sections else []
+    if unknown:
+        print(t("retry_locate", n=len(unknown)))
+    for eid in unknown:
+        try:
+            try:
+                sid = g.get(f"{GRAPH}/pages/{eid}?$select=id&$expand=parentSection($select=id)")["parentSection"]["id"]
+            except requests.HTTPError:
+                sid = eid  # l'erreur concernait une section entière
+            if sid not in sections:
+                sections[sid] = section_path(g, sid, root)
+        except Exception:
+            print(t("retry_lost", msg=state["errors"][eid]))
+    print(t("retry_title", n=len(state["errors"])))
+    state["retry_sections"] = {}
+    todo = []
+    for sid, path in sections.items():
+        collect_section(g, sid, tuple(path), state, todo)
+    save_state(state)
+    return todo
 
 
 def norm(s):
@@ -498,6 +566,7 @@ def download(g, todo, state):
             print(f"   [{i}/{len(todo)}] {' / '.join(path[1:])} / {p['display_title']}")
         except Exception as e:
             state["errors"][p["id"]] = f"{' / '.join(path)} / {p['display_title']} : {e}"
+            state["retry_sections"][p["_section"]] = list(path)
             print(f"   [{i}/{len(todo)}] ✗ {p['display_title']} : {e}")
         if i % 20 == 0:
             save_state(state)
@@ -548,7 +617,13 @@ def import_batch(batch, state, n, total):
         if not match and len(candidates) == 1:
             match = candidates[0]
         if not match:
+            # date différente (fuseau, arrondi…) : titre unique parmi les notes importées
+            same_title = [x for x in imported if x["name"] == norm(p["display_title"])]
+            if len(same_title) == 1:
+                match = same_title[0]
+        if not match:
             state["errors"][p["id"]] = t("not_found", path=' / '.join(path), title=p['display_title'])
+            state["retry_sections"][p["_section"]] = list(path)
             continue
         imported.remove(match)
         moves.setdefault(path, []).append((p["id"], match["id"]))
@@ -574,6 +649,7 @@ def main():
     ap.add_argument("--notebook", help=t("h_notebook"))
     ap.add_argument("--root", default="Import OneNote", help=t("h_root"))
     ap.add_argument("--client-id", default=DEFAULT_CLIENT_ID, help=t("h_client"))
+    ap.add_argument("--retry-errors", action="store_true", help=t("h_retry"))
     args = ap.parse_args()
 
     g = Graph(args.client_id)
@@ -584,19 +660,33 @@ def main():
             print(f"  📓 {nb['displayName']}")
         return
 
-    print(t("reading_tree"))
-    tree = load_tree(g, args.notebook)
-    if not tree:
-        sys.exit(t("no_notebook", named=t("named", name=args.notebook) if args.notebook else ""))
-
-    if args.list:
-        print_tree(tree)
-        return
-
     state = load_state()
-    limit = args.max_pages or float("inf")
-    todo = []
-    collect_pages(g, tree, (args.root,), state, todo, limit)
+    if args.retry_errors and not args.list:
+        if not state["errors"]:
+            print(t("retry_none"))
+            return
+        # « non retrouvée après import » : la note est peut-être restée dans « Notes importées »
+        unfiled = any(m.endswith(("non retrouvée après import", "not found after import"))
+                      for m in state["errors"].values())
+        todo = retry_todo(g, state, args.root)
+        if unfiled and todo:
+            print(t("unfiled_warn"))
+            input(t("press_enter"))
+    else:
+        print(t("reading_tree"))
+        tree = load_tree(g, args.notebook)
+        if not tree:
+            sys.exit(t("no_notebook", named=t("named", name=args.notebook) if args.notebook else ""))
+
+        if args.list:
+            print_tree(tree)
+            return
+
+        limit = args.max_pages or float("inf")
+        todo = []
+        stats = {"sections": 0, "done": 0}
+        collect_pages(g, tree, (args.root,), state, todo, limit, stats)
+        print(t("sections_summary", n=stats["sections"], done=stats["done"]))
     if not todo:
         print(t("nothing_new"))
     else:

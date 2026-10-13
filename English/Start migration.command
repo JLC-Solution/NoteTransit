@@ -21,6 +21,21 @@ if [ ! -x .venv/bin/python ]; then
     echo "Setup failed (internet connection?)."; read -r -p "Press Enter to close."; exit 1; }
 fi
 
+# Errors left from a previous run? Offer to retry only those pages.
+nerr=$(.venv/bin/python -c 'import json;print(len(json.load(open("migration_state.json")).get("errors",{})))' 2>/dev/null)
+if [ -n "$nerr" ] && [ "$nerr" -gt 0 ]; then
+  echo
+  echo "$nerr page(s) had errors during the previous run."
+  read -r -p "Retry ONLY these pages, without scanning all of OneNote again? (y/n) " retry
+  if [ "$retry" = "y" ] || [ "$retry" = "Y" ]; then
+    echo "If Notes asks \"Import?\": click Import."
+    caffeinate -i .venv/bin/python -u onenote_to_applenotes.py --retry-errors 2>&1 | tee -a migration.log
+    echo
+    read -r -p "Done. Press Enter to close."
+    exit 0
+  fi
+fi
+
 echo
 echo "Step 1: sign in to your Microsoft account and list your notebooks."
 echo "Nothing is written to Notes yet."

@@ -49,6 +49,10 @@ STOPPING AND RESUMING
   skipped, as long as you keep migration_state.json and don't delete or rename
   the folders created in Notes.
 
+Some pages ended with errors?
+- Run "Start migration.command" again: it asks "Retry ONLY these pages?".
+  Answer y: it reads only the sections with errors, not all of OneNote.
+
 Stopped at the wrong moment?
 - Quick fix: in Notes, delete the "Imported Notes" folder, run it again, and
   check for duplicates in the last folder being filed.

@@ -51,6 +51,11 @@ ARRÊTER ET REPRENDRE
   Notes sont sautées, à condition de garder migration_state.json et de ne pas
   supprimer ni renommer les dossiers créés dans Notes.
 
+Des pages en erreur à la fin ?
+- Relancez « Lancer la migration.command » : il demande « Réessayer UNIQUEMENT
+  ces pages ? ». Répondez o : il ne relit que les sections en erreur, pas tout
+  OneNote.
+
 Arrêté au mauvais moment ?
 - Solution rapide : dans Notes, supprimez le dossier « Notes importées »,
   relancez, et vérifiez les doublons dans le dernier dossier en cours de rangement.

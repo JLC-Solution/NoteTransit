@@ -106,6 +106,12 @@ Click in the Terminal window and press **Control + C** (or simply close the Term
 
 To resume, simply run `Start migration.command` again (same folder, same notebook choice). Pages already in Apple Notes are skipped — this works as long as you keep `migration_state.json` **and** don't delete or rename the folders created in Notes.
 
+### Some pages ended with errors?
+At the end, NoteTransit lists the pages it couldn't migrate. Just run `Start migration.command` again: it sees the errors and asks **"Retry ONLY these pages?"** — answer `y`. It then reads only the sections containing those pages instead of scanning all of OneNote again, which is much faster.
+If some pages were imported but not filed, it reminds you to delete the **Imported Notes** folder in Notes first, to avoid duplicates.
+
+On a normal (full) run, only the sections that still have pages to migrate are shown, plus a one-line summary.
+
 ### Stopped at the wrong moment?
 If you stopped after clicking **Import** (during the import or *"Filing notes into folders…"*), some notes are sitting in a folder called **Imported Notes** in Notes and NoteTransit doesn't know about them.
 
@@ -147,6 +153,7 @@ From the `English` or `Français` folder, after a first run (which creates `.ven
 .venv/bin/python onenote_to_applenotes.py --notebook "Travel"        # one notebook
 .venv/bin/python onenote_to_applenotes.py                            # everything
 .venv/bin/python onenote_to_applenotes.py --root "From OneNote"      # other root folder name
+.venv/bin/python onenote_to_applenotes.py --retry-errors             # retry only the pages that had errors
 ```
 
 ## How it works
@@ -252,6 +259,12 @@ Bon à savoir :
 | `Terminé : N notes migrées au total.` | ✅ Fini | Une relance n'ajoute que les **nouvelles** pages OneNote |
 
 Pour reprendre, relancez simplement `Lancer la migration.command` (même dossier, même choix de bloc-notes). Les pages déjà dans Notes sont sautées, à condition de garder `migration_state.json` **et** de ne pas supprimer ni renommer les dossiers créés dans Notes.
+
+**Des pages en erreur à la fin ?**
+À la fin, NoteTransit liste les pages qu'il n'a pas pu migrer. Relancez simplement `Lancer la migration.command` : il voit les erreurs et demande **« Réessayer UNIQUEMENT ces pages ? »** — répondez `o`. Il ne relit alors que les sections qui contiennent ces pages, au lieu de parcourir tout OneNote : c'est beaucoup plus rapide.
+Si des notes avaient été importées sans être rangées, il vous rappelle de supprimer d'abord le dossier **Notes importées** dans Notes, pour éviter les doublons.
+
+Lors d'un lancement normal (complet), seules les sections qui ont encore des pages à migrer sont affichées, avec un résumé sur une ligne.
 
 **Arrêté au mauvais moment ?**
 Si vous avez arrêté après avoir cliqué sur **Importer** (pendant l'import ou le « Rangement des notes dans les dossiers… »), des notes sont restées dans un dossier **Notes importées** et NoteTransit ne le sait pas.
