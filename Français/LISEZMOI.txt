@@ -15,8 +15,15 @@ Lancement
    si une alerte apparaît, cliquez sur Annuler, pas sur Corbeille.)
 2. Si Python n'est pas installé, macOS propose d'installer les « outils de ligne
    de commande » : acceptez, attendez la fin, puis relancez.
-3. Le Terminal affiche une adresse (https://login.microsoft.com/device) et un code :
-   ouvrez l'adresse, tapez le code, connectez-vous avec votre compte Microsoft.
+3. Première connexion : le Terminal affiche une adresse
+   (https://microsoft.com/devicelogin) et un code. Ouvrez l'adresse dans
+   n'importe quel navigateur (Mac ou téléphone), tapez le code et connectez-vous
+   avec le compte Microsoft qui contient vos blocs-notes OneNote.
+   Microsoft demande si « Microsoft Graph Command Line Tools » peut lire vos
+   blocs-notes OneNote : cliquez sur Accepter (accès en lecture seule).
+   Revenez ensuite au Terminal. Le code expire au bout d'environ 15 minutes :
+   si c'est le cas, relancez. La connexion est mémorisée (fichier caché
+   .token_cache.json) : les lancements suivants ne redemandent rien.
 4. La liste de vos blocs-notes s'affiche. Tapez le nom de l'un d'eux, ou Entrée
    pour tous. Répondez « o » pour un essai sur 3 pages, « n » pour tout faire.
 5. Le script fait l'inventaire, puis télécharge toutes les pages. Rien n'arrive
@@ -32,10 +39,44 @@ Résultat
   sous-dossier, page = note. Sous-pages titrées « Page parente › Sous-page ».
 - iCloud synchronise ensuite tout vers l'iPhone et l'iPad.
 
-Interruption : relancez simplement, la migration reprend où elle s'était arrêtée.
-Ne coupez PAS pendant « Rangement des notes dans les dossiers… ». Si c'est arrivé :
-supprimez dans Notes les dossiers « Import OneNote » et « Notes importées », ainsi que
-le fichier migration_state.json, puis relancez.
+ARRÊTER ET REPRENDRE
+- Pour arrêter : cliquez dans le Terminal et appuyez sur Contrôle+C (ou fermez
+  la fenêtre). OneNote n'est jamais modifié : rien ne peut y être abîmé.
+- Meilleur moment pour arrêter : pendant « Téléchargement… » et les lignes [12/340].
+- Si Notes demande « Importer ? » : cliquez d'abord sur Annuler dans Notes,
+  puis arrêtez.
+- N'arrêtez PAS après avoir cliqué sur Importer ni pendant « Rangement des
+  notes dans les dossiers… » : attendez la ligne « === Lot » suivante ou « Terminé ».
+- Pour reprendre : relancez « Lancer la migration.command ». Les pages déjà dans
+  Notes sont sautées, à condition de garder migration_state.json et de ne pas
+  supprimer ni renommer les dossiers créés dans Notes.
+
+Arrêté au mauvais moment ?
+- Solution rapide : dans Notes, supprimez le dossier « Notes importées »,
+  relancez, et vérifiez les doublons dans le dernier dossier en cours de rangement.
+- Recommencer proprement (sans doublons) : dans Notes, supprimez les dossiers
+  « Import OneNote » et « Notes importées » ; dans ce dossier, supprimez
+  migration_state.json et le dossier « exports » (gardez « cache » et
+  .token_cache.json) ; relancez.
+
+FICHIERS DE CE DOSSIER (fichiers cachés : Cmd+Maj+. dans le Finder)
+- .token_cache.json  votre connexion Microsoft (supprimer = se déconnecter)
+- migration_state.json  ce qui est déjà dans Notes (à supprimer UNIQUEMENT pour
+  recommencer proprement, sinon tout est réimporté = doublons)
+- cache/  pages téléchargées = une copie de vos notes (supprimable)
+- exports/  fichiers d'import temporaires (supprimable quand l'outil ne tourne pas)
+- migration.log  journal (supprimable)
+- .venv/  outils Python, ~50 Mo (supprimable, réinstallé au besoin)
+
+NETTOYER QUAND TOUT EST FINI
+Une fois vos notes vérifiées dans Notes et sur l'iPhone :
+- Le plus simple : mettez tout ce dossier à la Corbeille. Rien d'autre n'a été
+  installé.
+- Pour le garder (nouvelles pages OneNote plus tard) : supprimez seulement
+  cache/, exports/, migration.log (et .token_cache.json pour oublier la
+  connexion Microsoft) ; gardez migration_state.json.
+- Pour retirer aussi l'autorisation de votre compte Microsoft (compte perso) :
+  https://account.live.com/consent/Manage -> « Microsoft Graph Command Line Tools ».
 
 Conservé : titres, gras/italique/souligné, listes, cases à cocher, tableaux,
 images (à leur place), pièces jointes, dates de création et de modification.

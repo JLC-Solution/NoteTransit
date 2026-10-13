@@ -15,8 +15,14 @@ Running it
    if a warning appears, click Cancel, not Move to Trash.)
 2. If Python is not installed, macOS offers to install the "command line
    developer tools": accept, wait until it finishes, then run it again.
-3. The Terminal shows a link (https://login.microsoft.com/device) and a code:
-   open the link, type the code, sign in with your Microsoft account.
+3. First sign-in: the Terminal shows a link (https://microsoft.com/devicelogin)
+   and a code. Open the link in any browser (Mac or phone), type the code and
+   sign in with the Microsoft account that holds your OneNote notebooks.
+   Microsoft asks whether "Microsoft Graph Command Line Tools" may read your
+   OneNote notebooks: click Accept (read-only access). Then go back to the
+   Terminal. The code expires after ~15 minutes: if so, start again.
+   The sign-in is remembered (hidden file .token_cache.json): next runs
+   don't ask again.
 4. Your notebooks are listed. Type the name of one, or press Enter for all.
    Answer "y" for a 3-page test, "n" to do everything.
 5. The script takes inventory, then downloads every page. Nothing appears in
@@ -32,10 +38,41 @@ Result
   page = note. Sub-pages are titled "Parent page › Sub-page".
 - iCloud then syncs everything to your iPhone and iPad.
 
-Interrupted? Just run it again: it resumes where it stopped.
-Do NOT interrupt it during "Filing notes into folders…". If that happened:
-delete the "Import OneNote" and "Imported Notes" folders in Notes and the
-migration_state.json file, then run it again.
+STOPPING AND RESUMING
+- To stop: click in the Terminal and press Control+C (or close the window).
+  OneNote is never modified, so nothing can be damaged there.
+- Best moment to stop: while it shows "Downloading…" and the [12/340] lines.
+- While Notes asks "Import?": click Cancel in Notes first, then stop.
+- Do NOT stop after clicking Import or during "Filing notes into folders…":
+  wait for the next "=== Batch" line or for "Done".
+- To resume: run "Start migration.command" again. Pages already in Notes are
+  skipped, as long as you keep migration_state.json and don't delete or rename
+  the folders created in Notes.
+
+Stopped at the wrong moment?
+- Quick fix: in Notes, delete the "Imported Notes" folder, run it again, and
+  check for duplicates in the last folder being filed.
+- Clean restart (no duplicates): in Notes delete the "Import OneNote" and
+  "Imported Notes" folders; in this folder delete migration_state.json and the
+  "exports" folder (keep "cache" and .token_cache.json); run it again.
+
+FILES IN THIS FOLDER (hidden ones: press Cmd+Shift+. in Finder)
+- .token_cache.json  your Microsoft sign-in (delete = sign out)
+- migration_state.json  what is already in Notes (delete ONLY for a clean
+  restart, otherwise everything is imported again = duplicates)
+- cache/  downloaded pages = a copy of your notes (safe to delete)
+- exports/  temporary import files (safe to delete when not running)
+- migration.log  log of the run (safe to delete)
+- .venv/  Python tools, ~50 MB (safe to delete, reinstalled next time)
+
+CLEANING UP WHEN DONE
+Once your notes look right in Notes and on your iPhone:
+- Simplest: move this whole folder to the Trash. Nothing else was installed.
+- To keep it for new OneNote pages later: delete only cache/, exports/,
+  migration.log (and .token_cache.json to forget the Microsoft sign-in);
+  keep migration_state.json.
+- To remove the permission from your Microsoft account too (personal account):
+  https://account.live.com/consent/Manage -> "Microsoft Graph Command Line Tools".
 
 Kept: headings, bold/italic/underline, lists, checklists, tables, images (inline),
 attachments, original creation and modification dates.
